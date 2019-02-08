@@ -36,4 +36,11 @@ public @interface CircuitBreaker {
      */
     String name();
 
+    /**
+    * Expression to be evaluated for backend name, can be null.
+    *
+    * @return the expression of the circuit breaker
+    * */
+    String expression() default "";
+
 }

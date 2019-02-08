@@ -16,6 +16,7 @@
 package io.github.resilience4j.circuitbreaker.configure;
 
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -24,11 +25,19 @@ import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.expression.BeanFactoryResolver;
+import org.springframework.context.expression.MethodBasedEvaluationContext;
+import org.springframework.core.DefaultParameterNameDiscoverer;
+import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.core.Ordered;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.utils.CircuitBreakerUtils;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.common.TemplateParserContext;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
 
 /**
  * This Spring AOP aspect intercepts all methods which are annotated with a {@link CircuitBreaker} annotation.
@@ -42,10 +51,21 @@ public class CircuitBreakerAspect implements Ordered {
 
     private final CircuitBreakerConfigurationProperties circuitBreakerProperties;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private final BeanFactory beanFactory;
+
+    private static LocalVariableTableParameterNameDiscoverer u = new LocalVariableTableParameterNameDiscoverer();
+    private ExpressionParser parser = new SpelExpressionParser();
 
     public CircuitBreakerAspect(CircuitBreakerConfigurationProperties backendMonitorPropertiesRegistry, CircuitBreakerRegistry circuitBreakerRegistry) {
         this.circuitBreakerProperties = backendMonitorPropertiesRegistry;
         this.circuitBreakerRegistry = circuitBreakerRegistry;
+        this.beanFactory = null;
+    }
+
+    public CircuitBreakerAspect(CircuitBreakerConfigurationProperties circuitBreakerProperties, CircuitBreakerRegistry circuitBreakerRegistry, BeanFactory beanFactory) {
+        this.circuitBreakerProperties = circuitBreakerProperties;
+        this.circuitBreakerRegistry = circuitBreakerRegistry;
+        this.beanFactory = beanFactory;
     }
 
     @Pointcut(value = "@within(circuitBreaker) || @annotation(circuitBreaker)", argNames = "circuitBreaker")
@@ -59,9 +79,20 @@ public class CircuitBreakerAspect implements Ordered {
         if (backendMonitored == null) {
             backendMonitored = getBackendMonitoredAnnotation(proceedingJoinPoint);
         }
-        String backend = backendMonitored.name();
+        String backend = getBackendName(backendMonitored, method);
         io.github.resilience4j.circuitbreaker.CircuitBreaker circuitBreaker = getOrCreateCircuitBreaker(methodName, backend);
         return handleJoinPoint(proceedingJoinPoint, circuitBreaker, methodName);
+    }
+
+    private String getBackendName(CircuitBreaker backendMonitored, Method method){
+        String evaluatedBackendName = null;
+        if (!backendMonitored.expression().equalsIgnoreCase("") && beanFactory != null) {
+            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(null, method, u.getParameterNames(method), new DefaultParameterNameDiscoverer());
+            context.setBeanResolver(new BeanFactoryResolver(beanFactory));
+
+            evaluatedBackendName = parser.parseExpression(backendMonitored.expression(), new TemplateParserContext()).getValue(context, String.class);
+        }
+        return Optional.of(evaluatedBackendName).orElse(backendMonitored.name());
     }
 
     private io.github.resilience4j.circuitbreaker.CircuitBreaker getOrCreateCircuitBreaker(String methodName, String backend) {

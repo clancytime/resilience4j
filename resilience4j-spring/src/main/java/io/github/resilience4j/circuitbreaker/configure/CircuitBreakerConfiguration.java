@@ -21,6 +21,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.circuitbreaker.event.CircuitBreakerEvent;
 import io.github.resilience4j.consumer.DefaultEventConsumerRegistry;
 import io.github.resilience4j.consumer.EventConsumerRegistry;
+import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -47,8 +48,9 @@ public class CircuitBreakerConfiguration {
 
     @Bean
     public CircuitBreakerAspect circuitBreakerAspect(CircuitBreakerConfigurationProperties circuitBreakerProperties,
-                                                     CircuitBreakerRegistry circuitBreakerRegistry) {
-        return new CircuitBreakerAspect(circuitBreakerProperties, circuitBreakerRegistry);
+                                                     CircuitBreakerRegistry circuitBreakerRegistry,
+                                                     BeanFactory factory) {
+        return new CircuitBreakerAspect(circuitBreakerProperties, circuitBreakerRegistry, factory);
     }
 
     /**
