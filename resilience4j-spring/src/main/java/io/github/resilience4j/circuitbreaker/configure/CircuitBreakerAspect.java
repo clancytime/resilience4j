@@ -53,7 +53,6 @@ public class CircuitBreakerAspect implements Ordered {
     private final CircuitBreakerRegistry circuitBreakerRegistry;
     private final BeanFactory beanFactory;
 
-    private static LocalVariableTableParameterNameDiscoverer u = new LocalVariableTableParameterNameDiscoverer();
     private ExpressionParser parser = new SpelExpressionParser();
 
     public CircuitBreakerAspect(CircuitBreakerConfigurationProperties backendMonitorPropertiesRegistry, CircuitBreakerRegistry circuitBreakerRegistry) {
@@ -79,15 +78,15 @@ public class CircuitBreakerAspect implements Ordered {
         if (backendMonitored == null) {
             backendMonitored = getBackendMonitoredAnnotation(proceedingJoinPoint);
         }
-        String backend = getBackendName(backendMonitored, method);
+        String backend = getBackendName(backendMonitored, method, proceedingJoinPoint.getArgs());
         io.github.resilience4j.circuitbreaker.CircuitBreaker circuitBreaker = getOrCreateCircuitBreaker(methodName, backend);
         return handleJoinPoint(proceedingJoinPoint, circuitBreaker, methodName);
     }
 
-    private String getBackendName(CircuitBreaker backendMonitored, Method method){
+    private String getBackendName(CircuitBreaker backendMonitored, Method method, Object[] args){
         String evaluatedBackendName = null;
         if (!backendMonitored.expression().equalsIgnoreCase("") && beanFactory != null) {
-            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(null, method, u.getParameterNames(method), new DefaultParameterNameDiscoverer());
+            MethodBasedEvaluationContext context = new MethodBasedEvaluationContext(null, method, args, new DefaultParameterNameDiscoverer());
             context.setBeanResolver(new BeanFactoryResolver(beanFactory));
 
             evaluatedBackendName = parser.parseExpression(backendMonitored.expression(), new TemplateParserContext()).getValue(context, String.class);

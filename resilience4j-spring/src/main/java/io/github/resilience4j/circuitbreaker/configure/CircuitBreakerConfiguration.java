@@ -63,4 +63,11 @@ public class CircuitBreakerConfiguration {
     public EventConsumerRegistry<CircuitBreakerEvent> eventConsumerRegistry() {
         return new DefaultEventConsumerRegistry<>();
     }
+
+    @Bean
+    public CircuitBreakerRegistryAspect circuitBreakerRegistryAspect(CircuitBreakerConfigurationProperties circuitBreakerProperties,
+                                                                    EventConsumerRegistry<CircuitBreakerEvent> eventConsumerRegistry,
+                                                                    CircuitBreakerRegistry circuitBreakerRegistry) {
+        return new CircuitBreakerRegistryAspect(circuitBreakerRegistry, circuitBreakerProperties, eventConsumerRegistry);
+    }
 }
