@@ -16,8 +16,8 @@
 package io.github.resilience4j.circuitbreaker.configure;
 
 import java.lang.reflect.Method;
-import java.util.Optional;
 
+import io.vavr.control.Option;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -92,7 +92,7 @@ public class CircuitBreakerAspect implements Ordered {
 
             evaluatedBackendName = parser.parseExpression(backendMonitored.expression(), new TemplateParserContext()).getValue(context, String.class);
         }
-        return Optional.of(evaluatedBackendName).orElse(backendMonitored.name());
+        return Option.of(evaluatedBackendName).getOrElse(backendMonitored.name());
     }
 
     private io.github.resilience4j.circuitbreaker.CircuitBreaker getOrCreateCircuitBreaker(String methodName, String backend) {
