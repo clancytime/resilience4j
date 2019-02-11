@@ -29,7 +29,6 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.core.Ordered;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
