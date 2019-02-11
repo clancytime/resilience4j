@@ -31,15 +31,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class CircuitBreakerConfiguration {
 
+    private final String CIRCUIT_BREAKER_DEFAULTS_NAME = "defaults";
+
     @Bean
     public CircuitBreakerRegistry circuitBreakerRegistry(CircuitBreakerConfigurationProperties circuitBreakerProperties,
                                                          EventConsumerRegistry<CircuitBreakerEvent> eventConsumerRegistry) {
-        CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
+        CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.of(
+                circuitBreakerProperties.createCircuitBreakerConfig(CIRCUIT_BREAKER_DEFAULTS_NAME) // create registry from defaults if available
+        );
         circuitBreakerProperties.getBackends().forEach(
                 (name, properties) -> {
-                    CircuitBreakerConfig circuitBreakerConfig = circuitBreakerProperties.createCircuitBreakerConfig(name);
-                    CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(name, circuitBreakerConfig);
-                    circuitBreaker.getEventPublisher().onEvent(eventConsumerRegistry.createEventConsumer(name, properties.getEventConsumerBufferSize()));
+                    if (!name.equals(CIRCUIT_BREAKER_DEFAULTS_NAME)) {
+                        CircuitBreakerConfig circuitBreakerConfig = circuitBreakerProperties.createCircuitBreakerConfig(name);
+                        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(name, circuitBreakerConfig);
+                        circuitBreaker.getEventPublisher().onEvent(eventConsumerRegistry.createEventConsumer(name, properties.getEventConsumerBufferSize()));
+                    }
                 }
         );
         return circuitBreakerRegistry;
